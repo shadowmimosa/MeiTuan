@@ -1,0 +1,20 @@
+GET http://repair.salt.ch/CaseWizard/Salt/Timeout?_=1555819470307 HTTP/1.1
+Host: repair.salt.ch
+Proxy-Connection: keep-alive
+Accept: */*
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36
+Referer: http://repair.salt.ch/CaseWizard/Wizard/27427839-ade1-46ad-ab14-e03bcdf4b5b4/Salt/RepairAtHome
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: session.repairline=qxcaalkv5x1lwjhga4tp50wu; settings.repairline=pu4IokItfq5LEWk70NhlOQ==; __lfcc=1; _gcl_au=1.1.422010442.1555779379; _ga=GA1.2.758828348.1555779379; _gid=GA1.2.1282489554.1555779379; user_g_lang=en; _fbp=fb.1.1555779395926.1731891311; OrderInLast30Days=; pageview_visit=2; utag_main=v_id:016a3bad8cb8001bac0ac62a70ab03073001806b00bd0$_sn:2$_ss:1$_st:1555820041450$_pn:1%3Bexp-session$ses_id:1555818241450%3Bexp-session
+
+
+HTTP/1.1 200 OK
+Cache-Control: private
+Server: Microsoft-IIS/10.0
+Date: Sun, 21 Apr 2019 14:14:36 GMT
+Connection: close
+Content-Length: 0
+Proxy-Connection: keep-alive
+
