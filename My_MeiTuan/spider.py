@@ -163,7 +163,6 @@ class MeiTuan(object):
                 continue
             else:
                 value = sel_list["result"]["pois"][index]
-                print(value)
                 location = value["location"].split(',')
                 header = self.homepage_header
                 header["Cookie"] = header["Cookie"].format(location[1].replace(
@@ -180,6 +179,7 @@ class MeiTuan(object):
                         'a',
                         encoding='utf-8') as fn:
                     fn.write(shop_list + '\n')
+                    print("---> Writing successed.\n")
 
     def get_shop_info(self):
         shopid_list = []
