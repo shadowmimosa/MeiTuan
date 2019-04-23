@@ -1,3 +1,4 @@
+import os
 import requests
 import urllib3
 import time
@@ -83,7 +84,7 @@ class MeiTuan(object):
 
         return session
 
-    def deal_re(self, **kwargs):
+    def deal_re(self, byte=False, **kwargs):
         """requests of get"""
 
         url = kwargs["url"]
@@ -117,8 +118,10 @@ class MeiTuan(object):
             random_time = random.randint(3, 10)
             print("---> 现在开始睡眠 {} 秒\n".format(random_time))
             time.sleep(random_time)
-
-            return resp.text
+            if byte:
+                return resp.content
+            else:
+                return resp.text
         else:
             print("---> {} 请求失败！状态码为{}，共耗时{:.3}秒\n".format(
                 url, resp.status_code, end_time - start_time))
@@ -187,9 +190,14 @@ class MeiTuan(object):
                 './data/shoplist/{}.json'.format(self.city), 'r',
                 encoding='utf-8') as fn:
             for value in fn.readlines():
-                for shopid in json.loads(value)["data"]["shopList"]:
-                    if shopid not in shopid_list:
-                        shopid_list.append(shopid["mtWmPoiId"])
+                try:
+                    for shopid in json.loads(value)["data"]["shopList"]:
+                        if shopid not in shopid_list:
+                            shopid_list.append(shopid["mtWmPoiId"])
+                except Exception as exc:
+                    print(
+                        "---> Error!! Now in `get_shop_info`, and the value is {}\nThe info is {}"
+                        .format(value, exc))
 
         header = self.homepage_header
         data = {
@@ -217,9 +225,52 @@ class MeiTuan(object):
                     './data/shopinfo/{}.json'.format(self.city),
                     'a',
                     encoding='utf-8') as fn:
-                fn.write(shop_info + '\n')
+                try:
+                    fn.write(shop_info + '\n')
+                except TypeError as exc:
+                    print(
+                        "Error!! Now in `get_shop_info`, and the shop_info is {}\nThe info is {}"
+                        .format(shop_info, exc))
 
-        pass
+    def down_pic(self, url, poi_id, name):
+        header = {
+            "Host":
+            "{}".format(url.split('/')[2]),
+            "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36",
+            "Accept":
+            "image/webp,image/apng,image/*,*/*;q=0.8",
+            "Referer":
+            "http://i.waimai.meituan.com/node/legacy/poi-qualification?wm_poi_id={}"
+            .format(poi_id),
+            "Accept-Encoding":
+            "gzip, deflate",
+            "Accept-Language":
+            "zh-CN,zh;q=0.9"
+        }
+
+        resp = self.deal_re(byte=True, url=url, header=header)
+        with open(
+                './data/finally/pic/temp/{}_{}.jpg'.format(poi_id, name),
+                'ab',
+        ) as fn:
+            fn.write(bytes(resp))
+
+    def deal_pic(self, poi_id):
+        url = "http://i.waimai.meituan.com/ajax/v6/poi/qualification"
+        header = self.homepage_header
+        header["Origin"] = "http://i.waimai.meituan.com"
+        header[
+            "Referer"] = "http://i.waimai.meituan.com/node/legacy/poi-qualification?wm_poi_id={}".format(
+                poi_id)
+        header[
+            "Cookie"] = "_ga=GA1.3.1217321615.1555596854; _lxsdk_cuid=16a30cc57b8c8-035c98b09aa767-9333061-1fa400-16a30cc57b9c8; _lx_utm=utm_source%3DBaidu%26utm_medium%3Dorganic; wm_order_channel=default; au_trace_key_net=default; terminal=i; w_utmz=\"utm_campaign=(direct)&utm_source=5000&utm_medium=(none)&utm_content=(none)&utm_term=(none)\"; w_uuid=IF7nje9cK6zLOC9FGq5UPUdNOPNz5bGU3mryWXYCOemPCPRYJFiKVOkV3Glivwhx; __mta=256809908.1555764194983.1555764194983.1555768166452.2; utm_source=0; wx_channel_id=0; IJSESSIONID=1vcld5l3s32s0fpceg0aehv2w; iuuid=6245B9D92A1243663F6F5935F2E5900058266E99C3D75BE53A2FC56EA115D40B; latlng=23.222179%2C113.264696%2C1555781882793; ci=20; cityname=%E5%B9%BF%E5%B7%9E; backurl=http://i.meituan.com/zpay/284712; _lxsdk=6245B9D92A1243663F6F5935F2E5900058266E99C3D75BE53A2FC56EA115D40B; i_extend=H__a100040__b1; mtcdn=K; webp=1; __utma=74597006.166703875.1555781884.1555781884.1555781884.1; __utmc=74597006; __utmz=74597006.1555781884.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); openh5_uuid=6245B9D92A1243663F6F5935F2E5900058266E99C3D75BE53A2FC56EA115D40B; uuid=6245B9D92A1243663F6F5935F2E5900058266E99C3D75BE53A2FC56EA115D40B; openh5_uuid=6245B9D92A1243663F6F5935F2E5900058266E99C3D75BE53A2FC56EA115D40B; w_actual_lat=22561506; w_actual_lng=113974528; w_latlng=45618820,122857284; w_visitid=22d7a98b-d365-433f-a0ec-b5d868693018; _lxsdk_s=16a4b1dbf7a-659-b07-630%7C%7C2"
+        data = {"wm_poi_id": "931974723602744"}
+
+        resp = json.loads(self.deal_re(url=url, header=header, data=data))
+        pic_url_list = resp["data"]["qualify_pics"]
+        for i in range(len(pic_url_list)):
+            self.down_pic(pic_url_list[i], poi_id, name=i + 1)
 
 
 class DataClean(object):
@@ -230,7 +281,7 @@ class DataClean(object):
     def deal_phone(self, data):
 
         telphone = ""
-        data = eval(data)
+        # data = eval(data)
         if type(data) == list:
             for value in data:
                 if len(value) == 11 and '-' not in value:
@@ -244,17 +295,17 @@ class DataClean(object):
         else:
             return False
 
-    # def down_pic(self,info_csv):
-    # url = "http://i.waimai.meituan.com/ajax/v6/poi/qualification"
-    #     if len(eval(info_csv))==0:
-    #         resp=MeiTuan().deal_pic()
-    #     pass
+    def down_pic(self, content):
+        content = content.split('=')[-1]
+        MeiTuan().deal_pic(content)
+
+        return content
 
     def bulid_csv(self):
 
         info_csv = pd.DataFrame(columns=[
             "shopName", "shopAddress", "shopPhone", "licencePics",
-            "poiQualificationInfoUrl"
+            "poiQualificationInfo"
         ])
 
         shop_info_list = []
@@ -274,7 +325,7 @@ class DataClean(object):
                 value["data"]["shopPhone"],
                 "licencePics":
                 value["data"]["licencePics"],
-                "poiQualificationInfoUrl":
+                "poiQualificationInfo":
                 value["data"]["poiQualificationInfo"]["url"]
             },
                                        ignore_index=True)
@@ -286,6 +337,9 @@ class DataClean(object):
             tel_num = self.deal_phone(r["shopPhone"])
             if tel_num:
                 info_csv.loc[i, "shopPhone"] = tel_num
+                # if len(info_csv.loc[i, "licencePics"]) == 0:
+                info_csv.loc[i, "poiQualificationInfo"] = self.down_pic(
+                    info_csv.loc[i, "poiQualificationInfo"])
             else:
                 info_csv = info_csv.drop([i])
 
@@ -293,7 +347,7 @@ class DataClean(object):
             info_csv.to_csv(
                 './data/finally/lack/{}.csv'.format(self.city), index=False)
         else:
-            # self.down_pic(info_csv)
+            # info_csv = self.down_pic(info_csv)
             info_csv.to_csv(
                 './data/finally/{}.csv'.format(self.city), index=False)
 
@@ -302,7 +356,7 @@ class DataClean(object):
 
 
 def main(city_list=["浑江区"]):
-    import os
+
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     start_time = time.time()
@@ -318,7 +372,9 @@ def main(city_list=["浑江区"]):
 
 
 if __name__ == "__main__":
-    main(["宝塔区", "白城", "长乐市", "丹阳市", "佛冈"])
+    # main(["宝塔区", "白城", "长乐市", "丹阳市", "佛冈"])
 
-    # spider = MeiTuan('hun','hun')
-    # spider.random_list(20)
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    spider = DataClean("丹阳市").run
+    spider()
