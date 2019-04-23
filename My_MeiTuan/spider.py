@@ -3,6 +3,7 @@ import urllib3
 import time
 import json
 import random
+import pandas as pd
 
 
 class MeiTuan(object):
@@ -113,7 +114,7 @@ class MeiTuan(object):
         if resp.status_code == 200:
             print("---> {} 请求成功！共耗时{:.3}秒\n".format(url,
                                                     end_time - start_time))
-            random_time = random.randint(5, 15)
+            random_time = random.randint(3, 10)
             print("---> 现在开始睡眠 {} 秒\n".format(random_time))
             time.sleep(random_time)
 
@@ -136,9 +137,9 @@ class MeiTuan(object):
     def random_list(self, lenght):
         num_list = []
         i = 0
-        lenght = int(lenght / 10)
+        lenght = int(lenght / 20)
 
-        for j in range(10):
+        for j in range(20):
             random_num = random.randint(i, i + lenght)
             if random_num not in num_list:
                 num_list.append(random_num)
@@ -220,8 +221,36 @@ class MeiTuan(object):
 
         pass
 
-    def data_clean(self):
-        import pandas as pd
+
+class DataClean(object):
+    def __init__(self, city=""):
+
+        self.city = city
+
+    def deal_phone(self, data):
+
+        telphone = ""
+        data = eval(data)
+        if type(data) == list:
+            for value in data:
+                if len(value) == 11 and '-' not in value:
+                    telphone = telphone + value + ' '
+                else:
+                    continue
+            if len(telphone) == 0:
+                return False
+            else:
+                return telphone
+        else:
+            return False
+
+    # def down_pic(self,info_csv):
+    # url = "http://i.waimai.meituan.com/ajax/v6/poi/qualification"
+    #     if len(eval(info_csv))==0:
+    #         resp=MeiTuan().deal_pic()
+    #     pass
+
+    def bulid_csv(self):
 
         info_csv = pd.DataFrame(columns=[
             "shopName", "shopAddress", "shopPhone", "licencePics",
@@ -229,7 +258,6 @@ class MeiTuan(object):
         ])
 
         shop_info_list = []
-        new_info = []
         with open(
                 './data/shopinfo/{}.json'.format(self.city), 'r',
                 encoding='utf-8') as fn:
@@ -246,26 +274,51 @@ class MeiTuan(object):
                 value["data"]["shopPhone"],
                 "licencePics":
                 value["data"]["licencePics"],
-                "poiQualificationInfo":
+                "poiQualificationInfoUrl":
                 value["data"]["poiQualificationInfo"]["url"]
             },
                                        ignore_index=True)
 
-        info_csv.to_csv(
-            './data/shopinfo/{}.csv'.format(self.city), index=False)
+        info_csv.drop_duplicates(
+            subset=["shopName"], keep='first', inplace=True)
+
+        for i, r in info_csv.iterrows():
+            tel_num = self.deal_phone(r["shopPhone"])
+            if tel_num:
+                info_csv.loc[i, "shopPhone"] = tel_num
+            else:
+                info_csv = info_csv.drop([i])
+
+        if len(info_csv) < 100:
+            info_csv.to_csv(
+                './data/finally/lack/{}.csv'.format(self.city), index=False)
+        else:
+            # self.down_pic(info_csv)
+            info_csv.to_csv(
+                './data/finally/{}.csv'.format(self.city), index=False)
+
+    def run(self):
+        self.bulid_csv()
 
 
-if __name__ == "__main__":
+def main(city_list=["浑江区"]):
     import os
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    city_list = ["宝塔区", "白城", "长乐市", "丹阳市", "佛冈"]
     start_time = time.time()
     for value in city_list:
         spider = MeiTuan(value, value)
+        spider_clean = DataClean(value)
         spider.search_city()
         spider.homepage_list()
         spider.get_shop_info()
-        spider.data_clean()
+        spider_clean.run()
 
     print("---> 总计耗时为 {} 秒".format(time.time() - start_time))
+
+
+if __name__ == "__main__":
+    main(["宝塔区", "白城", "长乐市", "丹阳市", "佛冈"])
+
+    # spider = MeiTuan('hun','hun')
+    # spider.random_list(20)
